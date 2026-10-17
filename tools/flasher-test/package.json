@@ -1,0 +1,8 @@
+{
+  "name": "epaper-stock-flasher-test",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "serialport": "12.0.0"
+  }
+}

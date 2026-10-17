@@ -32,3 +32,7 @@ version.txt
 
 # Stray flash dumps
 /*.bin
+
+# Node test dependencies
+node_modules/
+package-lock.json

@@ -42,6 +42,7 @@ The firmware is for the board version with 4 MB flash and 2 MB PSRAM. The page r
 * `idf.py build`, then `idf.py -p PORT flash`.
 * The project uses `-flto`. A build in a folder path with spaces fails at the link step, so use a path without spaces.
 * To make a release, push a tag such as `v1.2.0`. GitHub Actions builds the firmware, attaches the images to the release and updates the install page.
+* [docs/MAINTAINING.md](docs/MAINTAINING.md) tells how the power saving, the release and the web installer work, and lists the hardware facts.
 
 ## License
 

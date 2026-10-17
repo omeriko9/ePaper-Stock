@@ -115,6 +115,18 @@ The tag starts `.github/workflows/release.yml`:
 
 A push to `main` that changes `web/` also starts `pages.yml`, so a page change does not need a new release.
 
+After a release, make sure that the live manifest has the new version:
+
+```
+curl -s https://omeriko9.github.io/ePaper-Stock/firmware/manifest.json | grep '"version"'
+```
+
+Two facts cause problems here:
+- A push to `main` with page changes deploys the new page with the images of the **previous** release.
+- On 2026-10-17, GitHub Pages kept the earlier deploy after the tag deploy reported "success".
+
+If the manifest is old 10 minutes after the release, run `gh workflow run pages.yml --ref main`. `selectBoard()` also accepts the v1.0.x manifest format, so a mismatch gives a clear message and not a crash.
+
 Setup on GitHub (done one time):
 
 - **Settings → Pages → Source:** "GitHub Actions".

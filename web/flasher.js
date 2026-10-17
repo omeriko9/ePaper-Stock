@@ -24,9 +24,13 @@ export function selectBoard(manifest, info) {
     return { error: `This device has an ${info.chip} chip. This update is for the ESP32-S3 ePaper Stock Ticker only.` };
   }
   const psram = (info.features.join(" ").match(/PSRAM (\d+MB)/) || [])[1];
-  const board = manifest.boards.find((b) => b.flash_size === info.flashSize);
+  // A v1.0.x manifest has only the V1 images, in "parts". GitHub Pages can serve such a
+  // manifest with this page for some minutes after a deploy.
+  const boards = manifest.boards ||
+    [{ id: "v1", name: "V1", flash_size: "4MB", psram: "2MB", parts: manifest.parts }];
+  const board = boards.find((b) => b.flash_size === info.flashSize);
   if (!board) {
-    const known = manifest.boards.map((b) => b.flash_size).join(" or ");
+    const known = boards.map((b) => b.flash_size).join(" or ");
     return { error: `This device has ${info.flashSize || "an unknown size of"} flash memory. This update is for boards with ${known} flash only.` };
   }
   // A 4 MB board with 8 MB PSRAM, or an 8 MB board with 2 MB PSRAM, is not a known version.

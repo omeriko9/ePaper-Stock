@@ -33,14 +33,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! gh release view --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+          if [ -z "$tag" ]; then
             echo "::notice::No release yet. Push a v* tag first."
             echo "found=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           mkdir -p site
           cp -r web/. site/
-          gh release download --repo "$GITHUB_REPOSITORY" --dir site/firmware
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir site/firmware
           test -f site/firmware/manifest.json
           ls -l site site/firmware
           echo "found=true" >> "$GITHUB_OUTPUT"

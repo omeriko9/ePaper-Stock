@@ -47,19 +47,20 @@ private:
     uint8_t volume_ = 70;
     void* task_handle_ = nullptr; // FreeRTOS TaskHandle_t as void* to avoid header dep
 
-    // Serialize init/deinit/play to avoid I2S races across tasks
+    // Serialize init/deinit/play to avoid I2S races across tasks.
+    // Recursive, because play() calls init() with the lock held.
     SemaphoreHandle_t mtx_ = nullptr;
     inline void lock() {
         if (!mtx_) {
-            mtx_ = xSemaphoreCreateMutex();
+            mtx_ = xSemaphoreCreateRecursiveMutex();
         }
         if (mtx_) {
-            xSemaphoreTake(mtx_, portMAX_DELAY);
+            xSemaphoreTakeRecursive(mtx_, portMAX_DELAY);
         }
     }
     inline void unlock() {
         if (mtx_) {
-            xSemaphoreGive(mtx_);
+            xSemaphoreGiveRecursive(mtx_);
         }
     }
 

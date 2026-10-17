@@ -1,5 +1,6 @@
 #include "audio_player.h"
 #include "settings.h"
+#include "utilities.h"
 #include "audio_bsp.h"
 
 #include <esp_log.h>
@@ -242,8 +243,9 @@ void AudioPlayer::streamMp3Task(void *a)
 
 esp_err_t AudioPlayer::play(const char *filename, bool blocking)
 {
-    // Do not power up the codec for a sound we will not play.
-    if (!Settings::instance().sound_enabled())
+    // Do not power up the codec for a sound we will not play. On USB power the
+    // sounds stay off, as in the earlier firmware.
+    if (!Settings::instance().sound_enabled() || !Utilities::is_on_battery_power())
         return ESP_OK;
 
     // Serialize init/play against post-wake init/deinit

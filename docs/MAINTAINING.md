@@ -87,7 +87,7 @@ The parts that make the wake short:
 - **Font in flash.** A 19 KB subset of NotoSans (`components/user_app/fonts/NotoSans-Subset.ttf`) is embedded, and FreeType reads it in place.
 - **Fast WiFi.** The BSSID and the channel of the access point are kept in RTC memory. The first try uses them, with a 4 s limit. The total limit is 10 s.
 - **Fewer requests.** The weather is fetched only when the screen shows it (market closed), at most every 15 minutes. After a failure, the next try is after 15 minutes. The market open and close times are fetched only when the cached value expires.
-- **Audio** starts only when a sound plays.
+- **Audio** starts only when a sound plays (`AudioPlayer::play()` calls `init()`). Sounds play only on battery power: `Utilities::is_on_battery_power()` reads VBAT, and 4.1 V or more means USB. The AudioPlayer mutex is recursive, because `play()` holds it when it calls `init()`. With a normal mutex, the first sound after a wake blocks the task forever.
 - **Logs** go to USB Serial/JTAG only. The bootloader log level is WARN.
 
 ## 4. Build

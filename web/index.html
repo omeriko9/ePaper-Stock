@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ePaper Stock Updater</title>
+<meta name="description" content="Update the ePaper Stock Ticker from the browser.">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --card: #ffffff;
+    --text: #1d1d1b;
+    --muted: #65645e;
+    --line: #e2e0d8;
+    --accent: #1f5fbf;
+    --accent-text: #ffffff;
+    --ok: #1d7a46;
+    --ok-bg: #e7f4ec;
+    --warn: #8a5a00;
+    --warn-bg: #fdf3dc;
+    --bad: #b3261e;
+    --bad-bg: #fbe9e7;
+    --bar: #e8e6df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161614;
+      --card: #20201d;
+      --text: #ecebe6;
+      --muted: #a3a29b;
+      --line: #34332e;
+      --accent: #6aa2ff;
+      --accent-text: #0d1b33;
+      --ok: #6fd39a;
+      --ok-bg: #16301f;
+      --warn: #f0c46a;
+      --warn-bg: #352a12;
+      --bad: #ff8a80;
+      --bad-bg: #3a1a17;
+      --bar: #34332e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161614;
+    --card: #20201d;
+    --text: #ecebe6;
+    --muted: #a3a29b;
+    --line: #34332e;
+    --accent: #6aa2ff;
+    --accent-text: #0d1b33;
+    --ok: #6fd39a;
+    --ok-bg: #16301f;
+    --warn: #f0c46a;
+    --warn-bg: #352a12;
+    --bad: #ff8a80;
+    --bad-bg: #3a1a17;
+    --bar: #34332e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  ol.steps li {
+    counter-increment: s;
+    position: relative;
+    padding: 0 0 18px 46px;
+  }
+  ol.steps li:last-child { padding-bottom: 0; }
+  ol.steps li::before {
+    content: counter(s);
+    position: absolute; left: 0; top: -2px;
+    width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-text);
+    font-weight: 700; font-size: 0.95rem;
+  }
+  ol.steps b { display: block; }
+  ol.steps span { color: var(--muted); font-size: 0.95rem; }
+  button {
+    font: inherit; font-weight: 600;
+    border: 0; border-radius: 10px;
+    padding: 14px 22px; width: 100%;
+    background: var(--accent); color: var(--accent-text);
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); margin-top: 10px; }
+  .msg { border-radius: 10px; padding: 14px 16px; margin: 0 0 16px; }
+  .msg.ok { background: var(--ok-bg); color: var(--ok); }
+  .msg.warn { background: var(--warn-bg); color: var(--warn); }
+  .msg.bad { background: var(--bad-bg); color: var(--bad); }
+  .msg p { margin: 0; }
+  .msg p + p { margin-top: 8px; }
+  dl.info { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 18px; font-size: 0.95rem; }
+  dl.info dt { color: var(--muted); }
+  dl.info dd { margin: 0; overflow-wrap: anywhere; }
+  .bar { height: 12px; background: var(--bar); border-radius: 6px; overflow: hidden; margin: 14px 0 8px; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+  .status { color: var(--muted); font-size: 0.95rem; margin: 0; }
+  label.check { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 16px; font-size: 0.95rem; }
+  label.check input { margin-top: 5px; }
+  details { margin-top: 8px; }
+  summary { color: var(--muted); cursor: pointer; font-size: 0.9rem; }
+  pre#log {
+    max-height: 240px; overflow: auto;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; font-size: 0.78rem; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .foot { color: var(--muted); font-size: 0.85rem; text-align: center; margin-top: 28px; }
+  .foot a { color: var(--accent); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ePaper Stock Ticker update</h1>
+  <p class="sub" id="version">Find the newest firmware…</p>
+
+  <div class="card" id="no-serial" hidden>
+    <div class="msg bad">
+      <p><b>This browser cannot connect to the device.</b></p>
+      <p>Open this page in Google Chrome or Microsoft Edge on a computer (Windows, Mac or Linux). Phones, Safari and Firefox do not work.</p>
+    </div>
+  </div>
+
+  <div class="card" id="intro">
+    <ol class="steps">
+      <li><b>Connect the device to this computer with a USB cable.</b>
+        <span>Some cables can only charge. If nothing happens in step 3, use a different cable.</span></li>
+      <li><b>Push the BOOT button one time.</b>
+        <span>The device wakes up and the screen shows the address of its web server. The device must stay awake during the update.</span></li>
+      <li><b>Click "Connect", then select the device in the list.</b>
+        <span>The name in the list is "USB JTAG/serial debug unit". Click it, then click "Connect".</span></li>
+    </ol>
+  </div>
+
+  <div class="card" id="panel">
+    <div id="message"></div>
+
+    <dl class="info" id="info" hidden></dl>
+
+    <label class="check" id="layout-confirm" hidden>
+      <input type="checkbox" id="layout-ok">
+      <span>I understand. The device can lose its settings, and I must set them again.</span>
+    </label>
+
+    <div id="progress" hidden>
+      <div class="bar"><div id="bar"></div></div>
+      <p class="status" id="status"></p>
+    </div>
+
+    <button id="connect" disabled>Connect</button>
+    <button id="install" hidden>Install the update</button>
+    <button id="again" class="secondary" hidden>Start again</button>
+
+    <details>
+      <summary>Technical details</summary>
+      <pre id="log"></pre>
+    </details>
+  </div>
+
+  <p class="foot">The update keeps your WiFi, stocks and Finnhub token.<br>
+    <a href="https://github.com/omeriko9/ePaper-Stock">Project page</a> ·
+    <a id="notes" href="https://github.com/omeriko9/ePaper-Stock/releases/latest">What is new</a></p>
+</main>
+
+<script type="module">
+import {
+  loadManifest, downloadParts, partitionTablePart, Device, ESPRESSIF_USB_VENDOR_ID,
+} from "./flasher.js";
+
+const FIRMWARE_BASE = new URL("firmware/", location.href);
+
+const $ = (id) => document.getElementById(id);
+const ui = {
+  version: $("version"), message: $("message"), info: $("info"),
+  connect: $("connect"), install: $("install"), again: $("again"),
+  progress: $("progress"), bar: $("bar"), status: $("status"),
+  layoutConfirm: $("layout-confirm"), layoutOk: $("layout-ok"), log: $("log"),
+};
+
+let manifest = null;
+let parts = null;
+let device = null;
+let busy = false;
+
+function log(line) {
+  ui.log.textContent += line.endsWith("\n") ? line : line + "\n";
+  ui.log.scrollTop = ui.log.scrollHeight;
+}
+
+function showMessage(kind, ...paragraphs) {
+  ui.message.innerHTML = "";
+  if (!kind) return;
+  const box = document.createElement("div");
+  box.className = "msg " + kind;
+  for (const text of paragraphs) {
+    const p = document.createElement("p");
+    p.textContent = text;
+    box.appendChild(p);
+  }
+  ui.message.appendChild(box);
+}
+
+function showInfo(rows) {
+  ui.info.innerHTML = "";
+  for (const [k, v] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = k;
+    const dd = document.createElement("dd");
+    dd.textContent = v;
+    ui.info.append(dt, dd);
+  }
+  ui.info.hidden = rows.length === 0;
+}
+
+function setProgress(fraction, text) {
+  ui.progress.hidden = false;
+  ui.bar.style.width = Math.round(fraction * 100) + "%";
+  ui.status.textContent = text;
+}
+
+function friendlyError(err) {
+  const text = String(err && (err.message || err));
+  log("ERROR: " + text);
+  if (err && err.name === "NotFoundError") {
+    return ["You did not select a device.", "Click \"Connect\" again and select \"USB JTAG/serial debug unit\". If the list is empty, push the BOOT button one time and try again."];
+  }
+  if (/Failed to open|already open|NetworkError|Access denied/i.test(text)) {
+    return ["The computer cannot open the device.", "Close all other programs and browser tabs that use the device, then try again."];
+  }
+  if (/connect|timeout|timed out|sync/i.test(text)) {
+    return ["The device did not answer.", "Push the BOOT button one time, wait 5 seconds, then try again."];
+  }
+  if (/device has been lost|disconnected|The device has been/i.test(text)) {
+    return ["The connection stopped.", "Do not disconnect the cable during the update. Connect the cable again and start again. The device starts correctly only after a full update."];
+  }
+  return ["The update did not complete.", text];
+}
+
+async function closeDevice() {
+  if (device) await device.close();
+  device = null;
+}
+
+function resetUi() {
+  ui.connect.hidden = false;
+  ui.connect.disabled = !manifest;
+  ui.install.hidden = true;
+  ui.again.hidden = true;
+  ui.layoutConfirm.hidden = true;
+  ui.layoutOk.checked = false;
+  ui.progress.hidden = true;
+  showInfo([]);
+  showMessage(null);
+}
+
+function fail(err) {
+  busy = false;
+  showMessage("bad", ...friendlyError(err));
+  ui.connect.hidden = true;
+  ui.install.hidden = true;
+  ui.layoutConfirm.hidden = true;
+  ui.again.hidden = false;
+  closeDevice();
+}
+
+async function onConnect() {
+  if (busy) return;
+  busy = true;
+  ui.connect.disabled = true;
+  showMessage(null);
+  try {
+    const port = await navigator.serial.requestPort({ filters: [{ usbVendorId: ESPRESSIF_USB_VENDOR_ID }] });
+
+    setProgress(0, "Connect to the device…");
+    device = new Device(port, log);
+    const info = await device.connect();
+    log(`Board: ${info.chip}, ${info.features.join(", ")}, flash ${info.flashSize}`);
+    showInfo([
+      ["Chip", info.chip],
+      ["Flash", info.flashSize || "unknown"],
+      ["Device ID", info.mac],
+    ]);
+
+    const wrong = Device.checkBoard(info);
+    if (wrong) {
+      ui.progress.hidden = true;
+      showMessage("bad", "This update is not for this device.", wrong, "The page did not change the device.");
+      ui.connect.hidden = true;
+      ui.again.hidden = false;
+      busy = false;
+      await closeDevice();
+      return;
+    }
+
+    if (!parts) {
+      parts = await downloadParts(FIRMWARE_BASE, manifest, (i, n, name) =>
+        setProgress(n ? i / n : 0, name ? `Download the update (${name})…` : "Download complete."));
+    }
+
+    setProgress(0, "Read the device…");
+    const sameLayout = await device.hasSameLayout(partitionTablePart(parts));
+    ui.progress.hidden = true;
+    ui.connect.hidden = true;
+    ui.install.hidden = false;
+
+    if (sameLayout) {
+      showMessage("ok", "The device is connected and it is correct.", `Click "Install the update" to install version ${manifest.version}.`);
+      ui.install.disabled = false;
+    } else {
+      showMessage("warn",
+        "This device has a different flash layout.",
+        "The device does not have the ePaper Stock software, or it has a very old version. After the update, you must set the WiFi and the stocks again.");
+      ui.layoutConfirm.hidden = false;
+      ui.install.disabled = true;
+    }
+    busy = false;
+  } catch (err) {
+    fail(err);
+  }
+}
+
+async function onInstall() {
+  if (busy || !device) return;
+  busy = true;
+  ui.install.disabled = true;
+  ui.layoutConfirm.hidden = true;
+  showMessage("warn", "Do not disconnect the cable and do not close this page.");
+  window.addEventListener("beforeunload", blockUnload);
+  try {
+    const start = Date.now();
+    await device.flash(parts, (done, total) => {
+      const pct = total ? done / total : 0;
+      setProgress(pct, `Install the update: ${Math.round(pct * 100)}%`);
+    });
+    setProgress(1, "Start the device…");
+    await device.reset();
+    log(`Done in ${Math.round((Date.now() - start) / 1000)} s`);
+    await closeDevice();
+    busy = false;
+    ui.install.hidden = true;
+    ui.again.hidden = true;
+    setProgress(1, "Complete.");
+    showMessage("ok",
+      `The update is complete. Version ${manifest.version} is on the device.`,
+      "The device starts again and shows the stocks after some seconds. You can disconnect the cable now.",
+      "If the screen stops to change later, push the PWR button one time. The device then uses a safer power setting.");
+  } catch (err) {
+    fail(err);
+  } finally {
+    window.removeEventListener("beforeunload", blockUnload);
+  }
+}
+
+function blockUnload(e) {
+  e.preventDefault();
+  e.returnValue = "";
+}
+
+async function onAgain() {
+  await closeDevice();
+  busy = false;
+  resetUi();
+}
+
+async function start() {
+  if (!("serial" in navigator)) {
+    $("no-serial").hidden = false;
+    $("intro").hidden = true;
+    $("panel").hidden = true;
+    ui.version.textContent = "";
+    return;
+  }
+  ui.connect.addEventListener("click", onConnect);
+  ui.install.addEventListener("click", onInstall);
+  ui.again.addEventListener("click", onAgain);
+  ui.layoutOk.addEventListener("change", () => { ui.install.disabled = !ui.layoutOk.checked; });
+
+  try {
+    manifest = await loadManifest(FIRMWARE_BASE);
+    const date = manifest.date ? ` · ${new Date(manifest.date).toLocaleDateString()}` : "";
+    ui.version.textContent = `Newest version: ${manifest.version}${date}`;
+    if (manifest.release_url) $("notes").href = manifest.release_url;
+    ui.connect.disabled = false;
+  } catch (err) {
+    log("ERROR: " + err);
+    ui.version.textContent = "";
+    showMessage("bad", "The page cannot find the firmware files.", "Refresh the page. If the problem stays, tell Omer.");
+  }
+}
+
+start();
+</script>
+</body>
+</html>

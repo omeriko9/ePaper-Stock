@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ePaper - Quick Settings</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: "Noto Sans", sans-serif;
+      padding-top: 100px; /* Reserve space for sticky header */
+      background-color: #181818;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      background: #212529; /* Bootstrap dark bg */
+      padding: 1rem 0;
+      z-index: 1020;
+      border-bottom: 1px solid #343a40;
+    }
+
+    .section {
+      border-radius: 10px;
+      padding: 20px;
+      background: #1e1e1e;
+      margin-bottom: 20px; /* Kept for g-4 compatibility */
+    }
+
+    .toggle-large {
+      width: 60px;
+      height: 30px;
+    }
+
+    #batteryCanvas {
+      width: 100px;
+      height: 50px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="app-header mb-4">
+    <div class="container d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <h2 class="mb-1">📰 ePaper Quick Settings</h2>
+        <p class="text-muted mb-0">Simple interface for everyday configuration.</p>
+      </div>
+      <div class="btn-group" role="group">
+        <button class="btn btn-primary" id="saveAll">Save All Settings</button>
+        <button class="btn btn-secondary" id="btnRestart">Restart Device</button>
+        <button class="btn btn-warning" id="btnClearCache">Clear Cache</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <div class="row row-cols-1 row-cols-lg-2 g-4">
+
+      <div class="col">
+        <div class="section h-100">
+          <h5>Location</h5>
+          <p class="small text-muted">Set your location to fetch accurate weather data.</p>
+          <div class="input-group mb-2">
+            <input type="text" id="mapSearch" class="form-control" placeholder="Search for your location">
+            <button class="btn btn-outline-secondary" id="btnSearch">Search</button>
+          </div>
+          <small id="tzLabel" class="text-info"></small>
+          <div id="map" style="height:200px;border-radius:8px;"></div>
+          
+          <hr class="my-3">
+          <h6 class="text-muted small">Weather Settings</h6>
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label small">Latitude</label>
+              <input type="text" maxlength="31" class="form-control form-control-sm" id="weather_latitude" placeholder="e.g., 40.7128">
+            </div>
+            <div class="col-12">
+              <label class="form-label small">Longitude</label>
+              <input type="text" maxlength="31" class="form-control form-control-sm" id="weather_longitude" placeholder="e.g., -74.0060">
+            </div>
+            <div class="col-12">
+              <label class="form-label small">Weather Timezone</label>
+              <input type="text" maxlength="63" class="form-control form-control-sm" id="weather_tz" placeholder="e.g., America/New_York">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="section h-100">
+          <h5>Power & Sleep</h5>
+          <p class="small text-muted">Sleep time configures how long will the device sleep between data refresh when market is open (in seconds).</p>
+          <p class="small text-muted">Market closed sleep time configures how long the device sleeps when the market is closed (in minutes). Default: 15 minutes.</p>
+          <p class="small text-muted">Awake time configures how long the device stays awake after each data refresh (in seconds).</p>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input toggle-large" type="checkbox" id="lightSleep">
+            <label class="form-check-label" for="lightSleep">Light Sleep Mode</label>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label">Sleep Time</label>
+              <select class="form-select" id="sleepTimeSelect">
+                <option value="60">1 Minute</option>
+                <option value="300">5 Minutes</option>
+                <option value="900">15 Minutes</option>
+                <option value="3600">60 Minutes</option>
+                <option value="custom">Custom</option>
+              </select>
+              <div class="mt-2 d-none" id="sleepCustomContainer">
+                <input type="number" min="1" class="form-control" id="sleepSeconds" placeholder="Seconds">
+                <div class="form-text small">Enter time in seconds</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Awake Time (s)</label>
+              <input type="number" min="1" class="form-control" id="awakeSeconds">
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label">Market Closed Sleep (min)</label>
+              <input type="number" min="1" class="form-control" id="marketClosedSleepMinutes">
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <h5 class="mb-3">Battery</h5>
+          <div class="d-flex align-items-center gap-3">
+            <canvas id="batteryCanvas" width="60" height="120"></canvas>
+            <div id="batteryStatus" class="fs-4 text-muted">--%</div>
+          </div>
+
+          <hr class="my-4">
+
+          <h5>Dead Battery Image Upload</h5>
+          <p class="small text-muted">Upload a 1-bit 200x200 standby image that can replace the normal screen below 20% battery, or be shown immediately with the test toggle.</p>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input toggle-large" type="checkbox" id="deadBatteryImageEnabled">
+            <label class="form-check-label" for="deadBatteryImageEnabled">Show uploaded image below 20% battery</label>
+          </div>
+          <input type="file" id="deadBatteryImageInput" accept="image/*" class="form-control mb-2">
+          <div class="d-grid gap-2 d-md-flex">
+            <button class="btn btn-outline-primary flex-fill" id="btnUploadDeadBatteryImage">Convert and Upload</button>
+            <button class="btn btn-outline-secondary flex-fill" id="btnTestDeadBatteryImage">Start Test Display</button>
+          </div>
+          <div id="deadBatteryImageStatus" class="small text-muted mt-2">No image uploaded.</div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="section h-100">
+          <h5>Sound</h5>
+          <p class="small text-muted">Enable or mute system notifications.</p>
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input toggle-large" type="checkbox" id="soundEnabled">
+              <label class="form-check-label" for="soundEnabled">Enabled</label>
+            </div>
+            <div class="flex-grow-1">
+              <input type="range" class="form-range" min="0" max="100" id="volumeRange">
+            </div>
+          </div>
+          <div class="table-responsive small">
+            <table class="table table-dark table-sm align-middle mb-2">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>File</th>
+                  <th>Size</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="soundRows">
+                </tbody>
+            </table>
+            <div id="audioFree" class="text-muted small"></div>
+          </div>
+          <button class="btn btn-secondary w-100" id="testSound">Test Sound</button>
+          <input type="file" id="soundUploadInput" accept="audio/mpeg" style="display:none">
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="section h-100">
+          <h5>Server</h5>
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <label class="form-label mb-0">Server Port:</label>
+            <input type="number" class="form-control" id="serverPort" placeholder="9123" style="max-width: 140px;">
+          </div>
+          <div class="mb-2">
+            <button class="btn btn-sm btn-outline-primary" id="btnUploadSpiffs">Upload Server File</button>
+            <input type="file" id="spiffsUploadInput" accept=".html,.js,.css,.ttf" style="display:none">
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input toggle-large" type="checkbox" id="logCaptureEnabled">
+            <label class="form-check-label" for="logCaptureEnabled">Log Capture (to log.txt)</label>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <label for="logLevel" class="form-label mb-0">Log Level:</label>
+            <select id="logLevel" class="form-select form-select-sm" style="max-width: 160px;">
+              <option value="0">None</option>
+              <option value="1">Error</option>
+              <option value="2">Warn</option>
+              <option value="3">Info</option>
+              <option value="4">Debug</option>
+              <option value="5">Verbose</option>
+            </select>
+            <button class="btn btn-sm btn-secondary" id="btnSetLogLevel">Set</button>
+          </div>
+        </div>
+      </div>
+
+    </div> <div class="row g-4 mt-0">
+      <div class="col-12">
+        <div class="section">
+          <h5>Stock Market</h5>
+          <p class="small text-muted">Set your Finnhub API token, track up to 10 stocks, and view market session timings.</p>
+
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Finnhub API Token</label>
+              <input type="text" class="form-control" id="finnhubToken" placeholder="Enter your Finnhub token">
+              <div class="form-text">Used for real-time quotes (header: X-Finnhub-Token)</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="small mt-4 pt-1">
+                <div>Market: <span id="marketOpenLbl">—</span></div>
+                <div>Regular open: <span id="mktOpen">—</span> · Regular close: <span id="mktClose">—</span></div>
+                <div>Time until <span id="mktTarget">—</span>: <span id="mktCountdown">—</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-check form-switch mb-3">
+                <input class="form-check-input toggle-large" type="checkbox" id="mockModeEnabled">
+            <label class="form-check-label" for="mockModeEnabled">Mock Mode (Test Data)</label>
+          </div>
+
+          <div class="row g-1 small fw-semibold text-muted mb-1">
+            <div class="col-4">Symbol</div>
+            <div class="col-3">Min $</div>
+            <div class="col-3">Max $</div>
+            <div class="col-2 text-end">Actions</div>
+          </div>
+
+          <div id="stockList"></div>
+          <button class="btn btn-sm btn-outline-primary mt-2" id="btnAddStock">+ Add Stock</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mt-0">
+      <div class="col-12">
+        <div class="section">
+          <h5>Logs</h5>
+          <p class="small text-muted">View and manage device logs. Enable log capture to save logs to file.</p>
+          <textarea id="logContent" class="form-control" rows="10" readonly style="font-family: monospace; font-size: 0.875rem;"></textarea>
+          <div class="mt-2 d-flex gap-2">
+            <button type="button" class="btn btn-secondary" id="btnFetchLogs">Fetch Logs</button>
+            <button type="button" class="btn btn-secondary" id="btnForceFlush">Force Flush</button>
+            <button type="button" class="btn btn-secondary" id="btnClearLog">Clear Log</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mt-0 mb-4">
+      <div class="col-12">
+        <div class="section">
+          <h5 class="text-danger">Danger Zone</h5>
+          <p class="small text-muted">This will restore all settings to their factory defaults and erase saved WiFi credentials.</p>
+          <button class="btn btn-danger w-100" id="restoreDefault">Restore Defaults & Wipe WiFi</button>
+        </div>
+      </div>
+    </div>
+
+  </main> <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize Leaflet map FIRST before using it
+      const map = L.map('map').setView([37.7749, -122.4194], 10); // Default: San Francisco
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      let marker, selectedLocation = {};
+
+      // Stock management
+      let stocksData = [];
+      const DEAD_BATTERY_IMAGE_WIDTH = 200;
+      const DEAD_BATTERY_IMAGE_HEIGHT = 200;
+      const DEAD_BATTERY_IMAGE_BYTES = (DEAD_BATTERY_IMAGE_WIDTH * DEAD_BATTERY_IMAGE_HEIGHT) / 8;
+
+      function setDeadBatteryImageStatus(message, isError = false) {
+        const el = document.getElementById('deadBatteryImageStatus');
+        el.textContent = message;
+        el.classList.toggle('text-danger', isError);
+        el.classList.toggle('text-muted', !isError);
+      }
+
+      async function refreshDeadBatteryImageStatus() {
+        try {
+          const res = await fetch('/api/dead_battery_image/status');
+          if (!res.ok) throw new Error('status fetch failed');
+          const data = await res.json();
+          const uploadState = data.uploaded ? `Uploaded (${data.size || DEAD_BATTERY_IMAGE_BYTES} bytes)` : 'No image uploaded';
+          const modeState = data.test_mode ? 'Test mode active' : 'Test mode inactive';
+          const enableState = data.enabled ? 'Auto-display enabled' : 'Auto-display disabled';
+          setDeadBatteryImageStatus(`${uploadState}. ${enableState}. ${modeState}.`);
+          document.getElementById('btnTestDeadBatteryImage').textContent = data.test_mode ? 'Stop Test Display' : 'Start Test Display';
+        } catch (err) {
+          console.error('Dead battery image status failed:', err);
+          setDeadBatteryImageStatus('Failed to load dead battery image status.', true);
+        }
+      }
+
+      async function convertImageToDeadBatteryBitmap(file) {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Failed to read image file'));
+          reader.readAsDataURL(file);
+        });
+
+        const image = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to decode image'));
+          img.src = dataUrl;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = DEAD_BATTERY_IMAGE_WIDTH;
+        canvas.height = DEAD_BATTERY_IMAGE_HEIGHT;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const scale = Math.min(canvas.width / image.width, canvas.height / image.height);
+        const drawWidth = Math.max(1, Math.round(image.width * scale));
+        const drawHeight = Math.max(1, Math.round(image.height * scale));
+        const offsetX = Math.floor((canvas.width - drawWidth) / 2);
+        const offsetY = Math.floor((canvas.height - drawHeight) / 2);
+        ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const packed = new Uint8Array(DEAD_BATTERY_IMAGE_BYTES);
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const pixelIndex = (y * canvas.width + x) * 4;
+            const alpha = imageData[pixelIndex + 3] / 255;
+            const red = imageData[pixelIndex];
+            const green = imageData[pixelIndex + 1];
+            const blue = imageData[pixelIndex + 2];
+            const luminance = ((0.299 * red) + (0.587 * green) + (0.114 * blue)) * alpha + (255 * (1 - alpha));
+            const isWhite = luminance >= 160;
+            const packedIndex = (y * (canvas.width / 8)) + (x >> 3);
+            const bitMask = 0x80 >> (x & 7);
+            if (isWhite) {
+              packed[packedIndex] |= bitMask;
+            }
+          }
+        }
+
+        return packed;
+      }
+
+      function renderStockList() {
+        const container = document.getElementById('stockList');
+        container.innerHTML = '';
+        stocksData.forEach((stock, idx) => {
+          const div = document.createElement('div');
+          div.className = 'card mb-2 bg-dark';
+          div.innerHTML = `
+          <div class="card-body p-2">
+            <div class="row g-1 align-items-center">
+              <div class="col-4">
+                <input type="text" class="form-control form-control-sm stock-symbol" data-idx="${idx}" value="${stock.symbol}" placeholder="AAPL" maxlength="15">
+              </div>
+              <div class="col-3">
+                <input type="number" class="form-control form-control-sm stock-min" data-idx="${idx}" value="${stock.min_sound || 0}" placeholder="Min $" step="0.01">
+              </div>
+              <div class="col-3">
+                <input type="number" class="form-control form-control-sm stock-max" data-idx="${idx}" value="${stock.max_sound || 0}" placeholder="Max $" step="0.01">
+              </div>
+              <div class="col-2 text-end">
+                <button class="btn btn-sm btn-danger btn-remove-stock" data-idx="${idx}">×</button>
+              </div>
+            </div>
+          </div>
+        `;
+          container.appendChild(div);
+        });
+
+        // Attach event listeners
+        document.querySelectorAll('.stock-symbol').forEach(el => {
+          el.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.idx);
+            stocksData[idx].symbol = e.target.value.toUpperCase();
+          });
+        });
+        document.querySelectorAll('.stock-min').forEach(el => {
+          el.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.idx);
+            stocksData[idx].min_sound = parseFloat(e.target.value) || 0;
+          });
+        });
+        document.querySelectorAll('.stock-max').forEach(el => {
+          el.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.idx);
+            stocksData[idx].max_sound = parseFloat(e.target.value) || 0;
+          });
+        });
+        document.querySelectorAll('.btn-remove-stock').forEach(el => {
+          el.addEventListener('click', (e) => {
+            const idx = parseInt(e.target.dataset.idx);
+            stocksData.splice(idx, 1);
+            renderStockList();
+          });
+        });
+      }
+
+      document.getElementById('btnAddStock').addEventListener('click', () => {
+        if (stocksData.length >= 10) {
+          alert('Maximum 10 stocks allowed');
+          return;
+        }
+        stocksData.push({ symbol: '', min_sound: 0, max_sound: 0 });
+        renderStockList();
+      });
+
+      // Sleep time select handler
+      document.getElementById('sleepTimeSelect').addEventListener('change', (e) => {
+        const val = e.target.value;
+        const container = document.getElementById('sleepCustomContainer');
+        const input = document.getElementById('sleepSeconds');
+        if (val === 'custom') {
+          container.classList.remove('d-none');
+          input.focus();
+        } else {
+          container.classList.add('d-none');
+          input.value = val;
+        }
+      });
+
+      // Load current config and fill values
+      let currentCfg = {};
+      async function loadConfig() {
+        try {
+          const res = await fetch('/api/config');
+          currentCfg = await res.json();
+          console.log('Loaded config:', currentCfg);
+
+          // Populate all fields with fallback defaults
+          document.getElementById('lightSleep').checked = currentCfg.light_sleep_enabled ?? true;
+          
+          const sleepSecs = Math.round((currentCfg.sleep_interval_ms ?? 60000) / 1000);
+          const sleepSelect = document.getElementById('sleepTimeSelect');
+          const sleepInput = document.getElementById('sleepSeconds');
+          const sleepCustomContainer = document.getElementById('sleepCustomContainer');
+          
+          sleepInput.value = sleepSecs;
+          if (['60', '300', '900', '3600'].includes(String(sleepSecs))) {
+            sleepSelect.value = String(sleepSecs);
+            sleepCustomContainer.classList.add('d-none');
+          } else {
+            sleepSelect.value = 'custom';
+            sleepCustomContainer.classList.remove('d-none');
+          }
+
+          document.getElementById('awakeSeconds').value = Math.round((currentCfg.awake_after_update_ms ?? 5000) / 1000);
+          document.getElementById('marketClosedSleepMinutes').value = Math.round((currentCfg.market_closed_sleep_ms ?? 900000) / 60000);
+          document.getElementById('soundEnabled').checked = currentCfg.sound_enabled ?? false;
+          document.getElementById('volumeRange').value = currentCfg.audio_volume ?? 70;
+          document.getElementById('serverPort').value = currentCfg.server_port ?? 9123;
+          document.getElementById('logCaptureEnabled').checked = currentCfg.log_capture_enabled ?? false;
+          document.getElementById('deadBatteryImageEnabled').checked = currentCfg.dead_battery_image_enabled ?? false;
+          // Log level default to INFO (3)
+          const ll = (typeof currentCfg.log_level === 'number') ? currentCfg.log_level : 3;
+          const ddl = document.getElementById('logLevel');
+          if (ddl) ddl.value = String(ll);
+          document.getElementById('mockModeEnabled').checked = currentCfg.mock_mode_enabled ?? false;
+          document.getElementById('finnhubToken').value = currentCfg.finnhub_token || '';
+
+          // Load stocks array
+          if (currentCfg.stocks && Array.isArray(currentCfg.stocks)) {
+            stocksData = currentCfg.stocks.map(s => ({
+              symbol: s.symbol || '',
+              min_sound: s.min_sound || 0,
+              max_sound: s.max_sound || 0
+            }));
+          } else if (currentCfg.stock_symbol) {
+            // Migrate old single stock
+            stocksData = [{
+              symbol: currentCfg.stock_symbol,
+              min_sound: currentCfg.stock_min_sound || 0,
+              max_sound: currentCfg.stock_max_sound || 0
+            }];
+          }
+          if (stocksData.length === 0) {
+            stocksData = [{ symbol: 'INTC', min_sound: 0, max_sound: 0 }];
+          }
+          renderStockList();
+
+          // Update timezone label and fields
+          const tz = currentCfg.weather_tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+          document.getElementById('tzLabel').textContent = 'Timezone: ' + tz;
+          
+          // Populate weather fields
+          document.getElementById('weather_latitude').value = currentCfg.weather_latitude || '';
+          document.getElementById('weather_longitude').value = currentCfg.weather_longitude || '';
+          document.getElementById('weather_tz').value = currentCfg.weather_tz || '';
+
+          // If we have saved location, show it on map
+          if (currentCfg.weather_latitude && currentCfg.weather_longitude) {
+            const lat = parseFloat(currentCfg.weather_latitude);
+            const lon = parseFloat(currentCfg.weather_longitude);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              selectedLocation = { lat, lon, display_name: currentCfg.weather_city || 'Saved location' };
+              if (marker) map.removeLayer(marker);
+              marker = L.marker([lat, lon]).addTo(map).bindPopup(selectedLocation.display_name).openPopup();
+              map.setView([lat, lon], 10);
+            }
+          }
+
+          await refreshDeadBatteryImageStatus();
+        } catch (err) {
+          console.error('Load config failed:', err);
+          alert('Failed to load configuration. Using defaults.');
+        }
+      }
+
+      // Location search
+      const mapSearch = document.getElementById('mapSearch');
+      mapSearch.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('btnSearch').click();
+        }
+      });
+
+      document.getElementById('btnSearch').onclick = async () => {
+        const q = mapSearch.value.trim();
+        if (!q || q.length < 3) return alert('Enter at least 3 characters.');
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          if (data?.length) {
+            const { lat, lon, display_name } = data[0];
+            selectedLocation = { lat: parseFloat(lat), lon: parseFloat(lon), display_name };
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lon]).addTo(map).bindPopup(display_name).openPopup();
+            map.setView([lat, lon], 10);
+
+            // Update weather input fields
+            document.getElementById('weather_latitude').value = parseFloat(lat).toFixed(5);
+            document.getElementById('weather_longitude').value = parseFloat(lon).toFixed(5);
+
+            // Update timezone label based on location (approximate)
+            document.getElementById('tzLabel').textContent = 'Location: ' + display_name;
+          } else {
+            alert('No results found.');
+          }
+        } catch (err) {
+          console.error('Location search failed:', err);
+          alert('Error fetching location.');
+        }
+      };
+
+      // Manual weather input handlers - update map when user types coordinates
+      const updateMapFromInputs = () => {
+        const latInput = document.getElementById('weather_latitude').value.trim();
+        const lonInput = document.getElementById('weather_longitude').value.trim();
+        if (latInput && lonInput) {
+          const lat = parseFloat(latInput);
+          const lon = parseFloat(lonInput);
+          if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            selectedLocation = { lat, lon, display_name: 'Manual entry' };
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lon]).addTo(map).bindPopup('Manual location').openPopup();
+            map.setView([lat, lon], 10);
+          }
+        }
+      };
+      
+      document.getElementById('weather_latitude').addEventListener('blur', updateMapFromInputs);
+      document.getElementById('weather_longitude').addEventListener('blur', updateMapFromInputs);
+
+      // Battery visualization with fixed logical resolution
+      function drawBattery(pct) {
+        const canvas = document.getElementById('batteryCanvas');
+        if (!canvas) return;
+
+        // Set display size (CSS pixels)
+        canvas.style.width = '100px';
+        canvas.style.height = '50px';
+
+        // Set actual size in memory (scaled for retina displays)
+        const scale = window.devicePixelRatio || 1;
+        canvas.width = 100 * scale;
+        canvas.height = 50 * scale;
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+
+        ctx.clearRect(0, 0, 100, 50);
+
+        // Determine color based on percentage
+        let color = '#00FF00'; // Green
+        if (pct < 20) color = '#FF0000'; // Red
+        else if (pct < 40) color = '#FFA500'; // Orange
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(10, 10, 80, 30);
+
+        // Battery terminal
+        ctx.fillStyle = color;
+        ctx.fillRect(90, 18, 5, 14);
+
+        // Fill level
+        ctx.fillStyle = color;
+        ctx.fillRect(12, 12, (pct / 100) * 76, 26);
+
+        document.getElementById('batteryStatus').textContent = Math.round(pct) + '%';
+      }
+
+      async function updateBattery() {
+        try {
+          const r = await fetch('/api/status');
+          const s = await r.json();
+          console.log('Status response:', s);
+
+          // Try different possible field names
+          const pct = s.battery ?? s.battery_pct ?? s.batteryPct ?? 0;
+          drawBattery(pct);
+
+          // Market info (if elements exist)
+          const openLbl = document.getElementById('marketOpenLbl');
+          const openEl = document.getElementById('mktOpen');
+          const closeEl = document.getElementById('mktClose');
+          const tgtEl = document.getElementById('mktTarget');
+          const cdEl = document.getElementById('mktCountdown');
+          const fmt = (ts) => (ts && ts > 0) ? new Date(ts * 1000).toLocaleTimeString() : '—';
+          const fmtDur = (secs) => {
+            if (secs == null) return '—';
+            secs = Math.max(0, Math.floor(secs));
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s2 = secs % 60;
+            if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s2).padStart(2,'0')}`;
+            return `${m}:${String(s2).padStart(2,'0')}`;
+          };
+          if (openLbl && s) {
+            openLbl.textContent = s.market_open ? 'OPEN' : 'CLOSED';
+          }
+          if (s && s.market_times) {
+            // Debug: log market times for verification
+            const wdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const et_wday = wdays[s.market_times.et_wday] || 'unknown';
+            console.log('=== MARKET TIMES DEBUG ===');
+            console.log('Now (UTC):', new Date(s.market_times.now_ts * 1000).toISOString());
+            console.log('ET offset:', s.market_times.et_offset_hours + ' hours (DST-aware)');
+            console.log('ET time/day:', 'hour=' + s.market_times.et_hour + ', wday=' + et_wday + ' (' + s.market_times.et_wday + ')');
+            console.log('Is weekend:', s.market_times.is_weekend);
+            console.log('Local offset:', s.market_times.local_offset_hours + ' hours');
+            console.log('---');
+            console.log('Regular Open (UTC):', new Date(s.market_times.regular_open_ts * 1000).toISOString());
+            console.log('Regular Open (Local):', fmt(s.market_times.regular_open_ts));
+            console.log('Regular Close (UTC):', new Date(s.market_times.regular_close_ts * 1000).toISOString());
+            console.log('Regular Close (Local):', fmt(s.market_times.regular_close_ts));
+            console.log('In Regular Hours:', s.market_times.in_regular);
+            if (s.market_times.next_open_ts) {
+              console.log('Next Open (UTC):', new Date(s.market_times.next_open_ts * 1000).toISOString());
+            }
+            console.log('===========================');
+            if (openEl) openEl.textContent = fmt(s.market_times.regular_open_ts);
+            if (closeEl) closeEl.textContent = fmt(s.market_times.regular_close_ts);
+            if (tgtEl && cdEl) {
+              if (s.market_times.in_regular) {
+                tgtEl.textContent = 'close';
+                cdEl.textContent = fmtDur(s.market_times.seconds_until_close);
+              } else {
+                tgtEl.textContent = 'open';
+                cdEl.textContent = fmtDur(s.market_times.seconds_until_open);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Battery fetch failed:', e);
+          drawBattery(0);
+        }
+      }
+
+      // Update battery every 10 seconds
+      updateBattery();
+      setInterval(updateBattery, 10000);
+
+      // Validation helpers
+      function validateNumber(id, min, max) {
+        const el = document.getElementById(id);
+        const v = Number(el.value);
+        const hasMax = max !== undefined && max !== null;
+        if (isNaN(v) || v < min || (hasMax && v > max)) {
+          el.classList.add('is-invalid');
+          return null;
+        }
+        el.classList.remove('is-invalid');
+        return v;
+      }
+
+      // Sound files UI
+      const SOUND_MAP = [
+        { key: 'market_open', label: 'Market open', name: 'market_open.mp3' },
+        { key: 'startup', label: 'Device start up', name: 'startup.mp3' },
+        { key: 'stock_high', label: 'Price hit upper bound', name: 'stock_high.mp3' },
+        { key: 'stock_low', label: 'Price hit lower bound', name: 'stock_low.mp3' },
+      ];
+
+      function formatKB(bytes) {
+        if (!bytes || bytes <= 0) return '—';
+        const kb = bytes / 1024;
+        return (Math.round(kb * 10) / 10).toFixed(1) + ' KB';
+      }
+
+      async function loadSoundFiles() {
+        try {
+          const res = await fetch('/api/sound/files');
+          if (!res.ok) throw new Error('Failed to fetch sound files');
+          const data = await res.json();
+          const tbody = document.getElementById('soundRows');
+          tbody.innerHTML = '';
+          (SOUND_MAP || []).forEach(ev => {
+            const info = (data.files || []).find(f => f.name === ev.name) || { size: 0, exists: false };
+            const sizeStr = info.exists ? formatKB(info.size) : '—';
+            const fileCell = info.exists ? `<a href="/audio/${ev.name}" download>${ev.name}</a>` : `<span class="text-muted">${ev.name}</span>`;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+            <td>${ev.label}</td>
+            <td>${fileCell}</td>
+            <td>${sizeStr}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-secondary me-2 btn-play" data-name="${ev.name}">Play</button>
+              <button class="btn btn-sm btn-outline-primary btn-upload" data-name="${ev.name}">Upload</button>
+            </td>`;
+            tbody.appendChild(tr);
+          });
+          // Free space display (from backend totals if available)
+          const freeEl = document.getElementById('audioFree');
+          if (data && typeof data.free_bytes === 'number' && typeof data.total_bytes === 'number') {
+            freeEl.textContent = `Free space: ${formatKB(data.free_bytes)} of ${formatKB(data.total_bytes)}`;
+          } else {
+            // Fallback: sum listed sizes against known partition size (512KB)
+            const sum = (data.files || []).reduce((a, f) => a + (f.size || 0), 0);
+            const total = 512 * 1024;
+            const free = Math.max(0, total - sum);
+            freeEl.textContent = `Free space: ${formatKB(free)} of ${formatKB(total)}`;
+          }
+          // actions
+          document.querySelectorAll('#soundRows .btn-play').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const name = e.currentTarget.dataset.name;
+              await fetch('/api/test_sound', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            });
+          });
+          document.querySelectorAll('#soundRows .btn-upload').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const name = e.currentTarget.dataset.name;
+              const inp = document.getElementById('soundUploadInput');
+              inp.dataset.name = name;
+              inp.value = '';
+              inp.click();
+            });
+          });
+        } catch (e) {
+          console.error('Sound files load failed', e);
+        }
+      }
+
+      document.getElementById('soundUploadInput').addEventListener('change', async (e) => {
+        const f = e.target.files && e.target.files[0];
+        const name = e.target.dataset.name;
+        if (!f || !name) return;
+        try {
+          const url = '/api/sound/upload?name=' + encodeURIComponent(name);
+          const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'audio/mpeg' }, body: f });
+          if (!res.ok) throw new Error('Upload failed');
+          await loadSoundFiles();
+        } catch (err) {
+          console.error('Upload failed', err);
+          alert('Upload failed: ' + err.message);
+        }
+      });
+
+      document.getElementById('btnUploadDeadBatteryImage').addEventListener('click', async () => {
+        const input = document.getElementById('deadBatteryImageInput');
+        const file = input.files && input.files[0];
+        if (!file) {
+          alert('Select an image first.');
+          return;
+        }
+
+        try {
+          setDeadBatteryImageStatus('Converting image...');
+          const bitmap = await convertImageToDeadBatteryBitmap(file);
+          setDeadBatteryImageStatus('Uploading converted image...');
+          const res = await fetch('/api/dead_battery_image/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: bitmap
+          });
+          if (!res.ok) {
+            throw new Error(await res.text());
+          }
+          await refreshDeadBatteryImageStatus();
+        } catch (err) {
+          console.error('Dead battery image upload failed:', err);
+          setDeadBatteryImageStatus('Dead battery image upload failed: ' + err.message, true);
+        }
+      });
+
+      document.getElementById('btnTestDeadBatteryImage').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/dead_battery_image/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+          });
+          if (!res.ok) {
+            throw new Error(await res.text());
+          }
+          const result = await res.json();
+          if (result.status === 'missing_image') {
+            setDeadBatteryImageStatus('Upload an image before enabling test mode.', true);
+            return;
+          }
+          await refreshDeadBatteryImageStatus();
+        } catch (err) {
+          console.error('Dead battery image test toggle failed:', err);
+          setDeadBatteryImageStatus('Failed to toggle dead battery test mode: ' + err.message, true);
+        }
+      });
+
+      // Save settings helper
+      async function saveSettings(url, payload) {
+        try {
+          console.log('Saving to', url, 'payload:', payload);
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error('Request failed: ' + text);
+          }
+          const result = await res.json();
+          console.log('Save result:', result);
+          alert('✅ Settings saved successfully!');
+          await loadConfig(); // Reload to confirm
+        } catch (e) {
+          console.error('Save failed:', e);
+          alert('❌ Error: ' + e.message);
+        }
+      }
+
+      // Test sound button
+      document.getElementById('testSound').onclick = async () => {
+        try {
+          const res = await fetch('/api/test_sound', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+          });
+          const result = await res.json();
+          if (result.status === 'ok') {
+            alert('🔊 Test sound playing!');
+          } else if (result.status === 'sound_disabled') {
+            alert('🔇 Sounds are disabled. Enable them first.');
+          } else {
+            alert('Error: ' + (result.message || result.status));
+          }
+        } catch (e) {
+          console.error('Test sound failed:', e);
+          alert('❌ Test sound failed: ' + e.message);
+        }
+      };
+
+      // Unified Save All button
+      document.getElementById('saveAll').onclick = async () => {
+        const sleep = validateNumber('sleepSeconds', 1);
+        const awake = validateNumber('awakeSeconds', 0);
+        const marketClosedSleep = validateNumber('marketClosedSleepMinutes', 1);
+        const port = validateNumber('serverPort', 1, 65535);
+
+        // Check explicitly for null (invalid), not falsy, so 0 is allowed
+        if (sleep === null || awake === null || marketClosedSleep === null || port === null) {
+          alert('❌ Please fix validation errors (check sleep, awake, market closed sleep, and port fields)');
+          return;
+        }
+
+        // Validate all stock symbols
+        for (let i = 0; i < stocksData.length; i++) {
+          const sym = stocksData[i].symbol.trim().toUpperCase();
+          if (sym && !sym.match(/^[A-Z0-9.]{1,15}$/)) {
+            alert('❌ Invalid stock symbol format: ' + sym);
+            return;
+          }
+          stocksData[i].symbol = sym;  // Update with uppercase
+        }
+
+        const weatherCity = (() => {
+          const locationName = String((selectedLocation && selectedLocation.display_name) || '').trim();
+          if (locationName && locationName !== 'Saved location' && locationName !== 'Manual entry') {
+            return locationName;
+          }
+          return String(mapSearch.value || currentCfg.weather_city || '').trim();
+        })();
+
+        const payload = {
+          light_sleep_enabled: document.getElementById('lightSleep').checked,
+          sleep_interval_ms: sleep * 1000,
+          awake_after_update_ms: awake * 1000,
+          market_closed_sleep_ms: marketClosedSleep * 60000,
+          server_port: port,
+          log_capture_enabled: document.getElementById('logCaptureEnabled').checked,
+          stocks: stocksData.filter(s => s.symbol.trim() !== ''),  // Only send non-empty stocks
+          sound_enabled: document.getElementById('soundEnabled').checked,
+          audio_volume: Number(document.getElementById('volumeRange').value) || 70,
+          mock_mode_enabled: document.getElementById('mockModeEnabled').checked,
+          finnhub_token: String(document.getElementById('finnhubToken').value || '').trim(),
+          weather_city: weatherCity,
+          weather_latitude: String(document.getElementById('weather_latitude').value || '').trim(),
+          weather_longitude: String(document.getElementById('weather_longitude').value || '').trim(),
+          weather_tz: String(document.getElementById('weather_tz').value || '').trim() || Intl.DateTimeFormat().resolvedOptions().timeZone,
+          dead_battery_image_enabled: document.getElementById('deadBatteryImageEnabled').checked
+        };
+
+        await saveSettings('/api/config', payload);
+      };
+
+      // Restore defaults button
+      document.getElementById('restoreDefault').onclick = () => {
+        if (confirm('⚠️ WARNING: This will restore all defaults and erase WiFi!\nPress OK to continue or Cancel to abort.')) {
+          if (confirm('Are you absolutely sure? Device will reboot after wipe.')) {
+            fetch('/api/wifi/wipe', { method: 'POST', body: '{}' })
+              .then(() => alert('WiFi credentials wiped. Device will reboot.'))
+              .catch(err => alert('Error: ' + err.message));
+          }
+        }
+      };
+
+      // Clear cache button
+      document.getElementById('btnClearCache').onclick = () => {
+        const warning = '⚠️ WARNING: This will clear the device cache.\n\n' +
+                        'This will erase:\n' +
+                        '• Stock price cache\n' +
+                        '• Market open/close times\n' +
+                        '• Weather data cache\n' +
+                        '• Battery status cache\n\n' +
+                        'This will NOT erase:\n' +
+                        '• WiFi credentials\n' +
+                        '• Settings (sleep interval, volume, etc.)\n\n' +
+                        'Press OK to continue or Cancel to abort.';
+        if (confirm(warning)) {
+          if (confirm('Are you sure? The device will refresh all cached data on next fetch cycle.')) {
+            fetch('/api/cache/clear', { method: 'POST', body: '{}' })
+              .then(res => res.json())
+              .then(result => {
+                if (result.status === 'ok') {
+                  alert('✅ Cache cleared successfully. Device will refresh data on next cycle.');
+                } else {
+                  alert('⚠️ ' + (result.message || 'Cache clear result: ' + result.status));
+                }
+              })
+              .catch(err => alert('❌ Error: ' + err.message));
+          }
+        }
+      };
+
+      // Load initial config
+      loadConfig();
+      loadSoundFiles();
+
+      // Upload Server File (SPIFFS /spiffs)
+      document.getElementById('btnUploadSpiffs').addEventListener('click', () => {
+        const inp = document.getElementById('spiffsUploadInput');
+        inp.value = '';
+        inp.click();
+      });
+      document.getElementById('spiffsUploadInput').addEventListener('change', async (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const allowed = ['index.html', 'admin.html', 'app.js', 'theme.css', 'NotoSans-Regular.ttf'];
+        let target = f.name;
+        if (!allowed.includes(target)) {
+          // Offer a simple mapping by extension
+          const ext = (target.split('.').pop() || '').toLowerCase();
+          if (ext === 'html') {
+            target = prompt('Store HTML as (index.html/admin.html):', 'index.html') || '';
+          } else if (ext === 'js') {
+            target = 'app.js';
+          } else if (ext === 'css') {
+            target = 'theme.css';
+          } else if (ext === 'ttf') {
+            target = 'NotoSans-Regular.ttf';
+          }
+          if (!allowed.includes(target)) {
+            alert('Unsupported target name. Allowed: ' + allowed.join(', '));
+            return;
+          }
+        }
+        try {
+          const url = '/api/sound/upload?dir=spiffs&name=' + encodeURIComponent(target);
+          const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: f });
+          if (!res.ok) throw new Error('Upload failed');
+          alert('Upload complete: ' + target);
+        } catch (err) {
+          console.error('SPIFFS upload failed', err);
+          alert('Upload failed: ' + err.message);
+        }
+      });
+
+      // Log level set
+      document.getElementById('btnSetLogLevel').addEventListener('click', async () => {
+        const level = Number(document.getElementById('logLevel').value);
+        try {
+          const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ log_level: level }) });
+          if (!res.ok) throw new Error(await res.text());
+          alert('Log level updated');
+        } catch (e) {
+          alert('Failed to set log level: ' + e.message);
+        }
+      });
+
+      // Log management buttons
+      document.getElementById('btnFetchLogs').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/log');
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const text = await res.text();
+          document.getElementById('logContent').value = text;
+        } catch (err) {
+          console.error('Failed to fetch logs:', err);
+          document.getElementById('logContent').value = 'Error fetching logs: ' + err.message;
+        }
+      });
+
+      document.getElementById('btnForceFlush').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/force_flush', { method: 'POST', body: '{}' });
+          if (!res.ok) throw new Error(await res.text());
+          alert('Log buffer flushed to file');
+        } catch (err) {
+          console.error('Flush failed:', err);
+          alert('Flush failed: ' + err.message);
+        }
+      });
+
+      document.getElementById('btnClearLog').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/clear_log', { method: 'POST', body: '{}' });
+          if (!res.ok) throw new Error(await res.text());
+          alert('Log file cleared');
+          document.getElementById('logContent').value = '';
+        } catch (err) {
+          console.error('Clear failed:', err);
+          alert('Clear failed: ' + err.message);
+        }
+      });
+    });
+
+  </script>
+  <script src="/app.js"></script>
+</body>
+
+</html>

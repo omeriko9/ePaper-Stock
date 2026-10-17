@@ -1,0 +1,75 @@
+# Builds the firmware. A pushed tag (v*) also makes a GitHub Release with the flash images
+# and then updates the web installer on GitHub Pages.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set the firmware version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=$(git describe --tags --always --dirty)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Write version.txt
+        run: echo "$VERSION" > version.txt
+
+      - name: Build with ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5
+          target: esp32s3
+
+      - name: Package the flash images
+        run: |
+          python3 tools/package_firmware.py build dist "$VERSION" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${VERSION}"
+          cat dist/manifest.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ env.VERSION }}
+          path: dist/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Make the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
+
+  pages:
+    needs: release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

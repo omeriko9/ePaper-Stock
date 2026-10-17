@@ -4,9 +4,10 @@
 
 import { ESPLoader, Transport } from "./vendor/esptool-js/esptool-0.7.0.js";
 
-// The firmware is for the V1 board: ESP32-S3 with 4 MB flash and 2 MB quad PSRAM.
+// The firmware has one build per board version. The manifest lists them, and
+// selectBoard() picks the build by the flash size that the chip reports:
+// V1 = ESP32-S3FH4R2 (4 MB flash, 2 MB quad PSRAM), V2 = ESP32-S3-PICO-1-N8R8 (8 MB, 8 MB octal).
 export const EXPECTED_CHIP = "ESP32-S3";
-export const EXPECTED_FLASH_SIZE = "4MB";
 export const ESPRESSIF_USB_VENDOR_ID = 0x303a;
 
 const PARTITION_TABLE_OFFSET = 0x8000;
@@ -17,11 +18,29 @@ export async function loadManifest(baseUrl) {
   return res.json();
 }
 
-// Downloads every part and checks its SHA-256 against the manifest.
-export async function downloadParts(baseUrl, manifest, onProgress = () => {}) {
+// Returns { board } with the manifest entry for this device, or { error } with a reason for the user.
+export function selectBoard(manifest, info) {
+  if (!info.chip.startsWith(EXPECTED_CHIP)) {
+    return { error: `This device has an ${info.chip} chip. This update is for the ESP32-S3 ePaper Stock Ticker only.` };
+  }
+  const psram = (info.features.join(" ").match(/PSRAM (\d+MB)/) || [])[1];
+  const board = manifest.boards.find((b) => b.flash_size === info.flashSize);
+  if (!board) {
+    const known = manifest.boards.map((b) => b.flash_size).join(" or ");
+    return { error: `This device has ${info.flashSize || "an unknown size of"} flash memory. This update is for boards with ${known} flash only.` };
+  }
+  // A 4 MB board with 8 MB PSRAM, or an 8 MB board with 2 MB PSRAM, is not a known version.
+  if (psram && board.psram && psram !== board.psram) {
+    return { error: `This device has ${info.flashSize} flash and ${psram} PSRAM. This is not a known version of the board.` };
+  }
+  return { board };
+}
+
+// Downloads every part of the board and checks its SHA-256 against the manifest.
+export async function downloadParts(baseUrl, board, onProgress = () => {}) {
   const parts = [];
-  for (const [i, part] of manifest.parts.entries()) {
-    onProgress(i, manifest.parts.length, part.name);
+  for (const [i, part] of board.parts.entries()) {
+    onProgress(i, board.parts.length, part.name);
     const res = await fetch(new URL(part.file, baseUrl), { cache: "no-store" });
     if (!res.ok) throw new Error(`${part.file}: HTTP ${res.status}`);
     const data = new Uint8Array(await res.arrayBuffer());
@@ -31,7 +50,7 @@ export async function downloadParts(baseUrl, manifest, onProgress = () => {}) {
     }
     parts.push({ ...part, offset: Number(part.offset), data });
   }
-  onProgress(manifest.parts.length, manifest.parts.length, "");
+  onProgress(board.parts.length, board.parts.length, "");
   return parts;
 }
 
@@ -57,21 +76,6 @@ export class Device {
     const flashSize = await this.loader.detectFlashSize();
     const mac = await this.loader.chip.readMac(this.loader);
     return { chip, features, flashSize, mac };
-  }
-
-  // Returns null if the board is correct, else a reason for the user.
-  static checkBoard(info) {
-    if (!info.chip.startsWith(EXPECTED_CHIP)) {
-      return `This device has an ${info.chip} chip. This update is for the ESP32-S3 ePaper Stock Ticker only.`;
-    }
-    if (info.flashSize !== EXPECTED_FLASH_SIZE) {
-      return `This device has ${info.flashSize || "an unknown size of"} flash memory. ` +
-        `This update is for the board version with 4MB flash only.`;
-    }
-    if (info.features.some((f) => /PSRAM 8MB/.test(f))) {
-      return "This device has 8MB PSRAM. This update is for the board version with 2MB PSRAM only.";
-    }
-    return null;
   }
 
   // True if the device has the same flash layout (partition table) as the new firmware.

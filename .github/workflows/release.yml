@@ -30,16 +30,30 @@ jobs:
       - name: Write version.txt
         run: echo "$VERSION" > version.txt
 
-      - name: Build with ESP-IDF
+      - name: Build for the V1 board
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v5.5
           target: esp32s3
 
+      # Same code, with the octal PSRAM overlay. A separate sdkconfig keeps the V1 config clean.
+      - name: Build for the V2 board
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5
+          target: esp32s3
+          command: idf.py -B build_v2 -DSDKCONFIG=build_v2/sdkconfig "-DSDKCONFIG_DEFAULTS=sdkconfig.defaults;boards/v2.defaults" build
+
+      - name: Check the PSRAM mode of each build
+        run: |
+          grep -q "^CONFIG_SPIRAM_MODE_QUAD=y" sdkconfig
+          grep -q "^CONFIG_SPIRAM_MODE_OCT=y" build_v2/sdkconfig
+
       - name: Package the flash images
         run: |
-          python3 tools/package_firmware.py build dist "$VERSION" \
-            "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${VERSION}"
+          python3 tools/package_firmware.py dist "$VERSION" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${VERSION}" \
+            v1=build v2=build_v2
           cat dist/manifest.json
 
       - uses: actions/upload-artifact@v4

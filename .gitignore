@@ -36,3 +36,6 @@ version.txt
 # Node test dependencies
 node_modules/
 package-lock.json
+
+# Extra board builds (idf.py -B build_v2)
+build_*/

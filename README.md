@@ -8,7 +8,7 @@ A WiFi stock ticker on a 1.54" e-paper display. It shows stock prices, the US ma
 
 Open **[omeriko9.github.io/ePaper-Stock](https://omeriko9.github.io/ePaper-Stock/)** in Google Chrome or Microsoft Edge on a computer, then follow the steps on the page. The page writes the latest release to the device through USB. It keeps the WiFi password, the stocks and the Finnhub token.
 
-The firmware is for the board version with 4 MB flash and 2 MB PSRAM. The page reads the board data and stops if the board is a different version.
+The page supports both board versions: V1 (4 MB flash, 2 MB PSRAM) and V2 (8 MB flash, 8 MB PSRAM). It reads the board and selects the correct build. If the board is an unknown version, the page stops and changes nothing.
 
 ## Features
 
@@ -39,7 +39,8 @@ The firmware is for the board version with 4 MB flash and 2 MB PSRAM. The page r
 ## Build from source
 
 * ESP-IDF v5.5, target `esp32s3`, with the Arduino component (installed by the component manager).
-* `idf.py build`, then `idf.py -p PORT flash`.
+* V1 board: `idf.py build`, then `idf.py -p PORT flash`.
+* V2 board: `idf.py -B build_v2 -DSDKCONFIG=build_v2/sdkconfig "-DSDKCONFIG_DEFAULTS=sdkconfig.defaults;boards/v2.defaults" build`, then flash from `build_v2`.
 * The project uses `-flto`. A build in a folder path with spaces fails at the link step, so use a path without spaces.
 * To make a release, push a tag such as `v1.2.0`. GitHub Actions builds the firmware, attaches the images to the release and updates the install page.
 * [docs/MAINTAINING.md](docs/MAINTAINING.md) tells how the power saving, the release and the web installer work, and lists the hardware facts.

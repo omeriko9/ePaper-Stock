@@ -10,19 +10,20 @@ Do not push branches from an older clone of this project into this repository.
 
 ## 2. Hardware target
 
-The firmware is for the **Waveshare ESP32-S3-ePaper-1.54 V1** board:
+The firmware supports the two versions of the **Waveshare ESP32-S3-ePaper-1.54** board:
 
-| Item | Value |
-|---|---|
-| Chip | ESP32-S3FH4R2 (QFN56) |
-| Flash | 4 MB, embedded |
-| PSRAM | 2 MB, embedded, **quad** (AP_3v3) |
-| Display | 200 x 200, SSD1681 |
-| RTC | PCF85063 at I2C 0x51 |
-| Sensor | SHTC3 at I2C 0x70 (not used) |
-| Audio | ES8311 codec, with an amplifier |
+| Item | V1 | V2 |
+|---|---|---|
+| Chip | ESP32-S3FH4R2 (QFN56) | ESP32-S3-PICO-1-N8R8 |
+| Flash | 4 MB | 8 MB |
+| PSRAM | 2 MB, **quad** | 8 MB, **octal** |
+| Build | `sdkconfig.defaults` | `sdkconfig.defaults` + `boards/v2.defaults` |
 
-The V2 board has 8 MB flash and 8 MB octal PSRAM. This firmware does not work on it. The web installer reads the board and stops on a V2 board.
+Both versions have the same pins (the Waveshare V1 and V2 examples have the same `user_config.h`), and the same parts: a 200 x 200 SSD1681 display, a PCF85063 RTC at I2C 0x51, an SHTC3 at 0x70 (not used) and an ES8311 codec with an amplifier. The only config difference is `CONFIG_SPIRAM_MODE_OCT` for V2. A V2 board has "V2" on the back or in the top-left corner of the PCB.
+
+The V2 build keeps the 4 MB flash layout. Thus both builds have the same partition table, and an update from an older firmware keeps NVS on both boards.
+
+The hardware facts below were found on a V1 board. Waveshare says that V2 has a lower sleep current, so the power circuit of V2 can be different. The latch fault detector (3.2) also covers V2.
 
 ### Hardware facts that cost debug time
 
@@ -107,8 +108,8 @@ To make a release:
 
 The tag starts `.github/workflows/release.yml`:
 
-1. **build** writes `version.txt` from the tag and builds with `espressif/esp-idf-ci-action` (IDF v5.5).
-2. `tools/package_firmware.py` copies the images to `dist/` and writes `manifest.json` (offset, size and SHA-256 of each image) and `flash-command.txt`.
+1. **build** writes `version.txt` from the tag and builds two times with `espressif/esp-idf-ci-action` (IDF v5.5): V1 in `build/`, and V2 in `build_v2/` with the `boards/v2.defaults` overlay. A check step makes sure that V1 has quad PSRAM and V2 has octal PSRAM.
+2. `tools/package_firmware.py` copies the images to `dist/` as `<name>-v1.bin` and `<name>-v2.bin`. It writes `manifest.json` (for each board: the flash size, the PSRAM size, and the offset, size and SHA-256 of each image) and `flash-command.txt`.
 3. **release** makes the GitHub Release and attaches the files.
 4. **pages** calls `.github/workflows/pages.yml`. It copies `web/` and the images of the latest release to the Pages site.
 
@@ -136,7 +137,7 @@ The installer does these steps:
 1. It reads `firmware/manifest.json`.
 2. The user selects the port (Web Serial; Chrome and Edge only).
 3. It loads the esptool stub and reads the chip, the flash size and the PSRAM size.
-4. It stops if the chip is not ESP32-S3 with 4 MB flash and no 8 MB PSRAM.
+4. `selectBoard()` selects the build in the manifest with the same flash size (4 MB = V1, 8 MB = V2). It stops if the chip is not an ESP32-S3, if no build has that flash size, or if the PSRAM size in eFuse does not agree with the board.
 5. It downloads the images and checks their SHA-256.
 6. It compares the partition table on the device with the new one. If they are different, the user must accept that the settings can be lost.
 7. It writes 0x0, 0x8000, 0x10000, 0x210000 and 0x350000 only. NVS (0x9000) does not change. esptool-js checks the MD5 of each image.

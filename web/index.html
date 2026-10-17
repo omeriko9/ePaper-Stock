@@ -180,7 +180,7 @@
 
 <script type="module">
 import {
-  loadManifest, downloadParts, partitionTablePart, Device, ESPRESSIF_USB_VENDOR_ID,
+  loadManifest, selectBoard, downloadParts, partitionTablePart, Device, ESPRESSIF_USB_VENDOR_ID,
 } from "./flasher.js";
 
 const FIRMWARE_BASE = new URL("firmware/", location.href);
@@ -195,6 +195,7 @@ const ui = {
 
 let manifest = null;
 let parts = null;
+let partsBoard = null;
 let device = null;
 let busy = false;
 
@@ -291,16 +292,17 @@ async function onConnect() {
     device = new Device(port, log);
     const info = await device.connect();
     log(`Board: ${info.chip}, ${info.features.join(", ")}, flash ${info.flashSize}`);
+    const { board, error } = selectBoard(manifest, info);
     showInfo([
       ["Chip", info.chip],
       ["Flash", info.flashSize || "unknown"],
+      ["Board", board ? board.name : "unknown"],
       ["Device ID", info.mac],
     ]);
 
-    const wrong = Device.checkBoard(info);
-    if (wrong) {
+    if (error) {
       ui.progress.hidden = true;
-      showMessage("bad", "This update is not for this device.", wrong, "The page did not change the device.");
+      showMessage("bad", "This update is not for this device.", error, "The page did not change the device.");
       ui.connect.hidden = true;
       ui.again.hidden = false;
       busy = false;
@@ -308,9 +310,11 @@ async function onConnect() {
       return;
     }
 
-    if (!parts) {
-      parts = await downloadParts(FIRMWARE_BASE, manifest, (i, n, name) =>
+    // A second device in the same visit can be the other board version.
+    if (!parts || partsBoard !== board.id) {
+      parts = await downloadParts(FIRMWARE_BASE, board, (i, n, name) =>
         setProgress(n ? i / n : 0, name ? `Download the update (${name})…` : "Download complete."));
+      partsBoard = board.id;
     }
 
     setProgress(0, "Read the device…");

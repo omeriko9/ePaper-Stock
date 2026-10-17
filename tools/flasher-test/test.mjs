@@ -5,7 +5,7 @@
 //   flash: check, then write all parts of the manifest and reset
 import { SerialPort } from "serialport";
 const [, , comPath, mode = "check", baseUrl = "http://127.0.0.1:8765/firmware/"] = process.argv;
-const { loadManifest, downloadParts, partitionTablePart, Device } =
+const { loadManifest, selectBoard, downloadParts, partitionTablePart, Device } =
   await import(new URL("../../web/flasher.js", import.meta.url));
 
 class WebSerialShim {
@@ -39,14 +39,16 @@ class WebSerialShim {
 const log = (l) => process.stdout.write("  | " + l.replace(/\n$/, "") + "\n");
 const t0 = Date.now();
 const manifest = await loadManifest(new URL(baseUrl));
-console.log("manifest", manifest.version, manifest.parts.map((p) => p.file).join(", "));
-const parts = await downloadParts(new URL(baseUrl), manifest);
-console.log("downloaded + sha256 ok");
+console.log("manifest", manifest.version, manifest.boards.map((b) => b.id).join(", "));
 const dev = new Device(new WebSerialShim(comPath), log);
 try {
   const info = await dev.connect();
   console.log("info", JSON.stringify(info));
-  console.log("checkBoard ->", Device.checkBoard(info) ?? "OK");
+  const { board, error } = selectBoard(manifest, info);
+  console.log("selectBoard ->", error ?? board.name);
+  if (error) process.exit(1);
+  const parts = await downloadParts(new URL(baseUrl), board);
+  console.log("downloaded + sha256 ok:", parts.map((p) => p.file).join(", "));
   console.log("same layout ->", await dev.hasSameLayout(partitionTablePart(parts)));
   if (mode === "reset") {
     await dev.reset();
